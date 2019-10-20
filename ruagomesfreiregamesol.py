@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 
 class Node:
 
-    def __init__(self, n, p, g, h, tickets):
-        self.n = n
-        self.p = p
+    def __init__(self, number, parent, g, h, tickets):
+        self.number = number
+        self.parent = parent
         self.h = h
         self.g = g
         self.f = g + h
@@ -24,91 +24,105 @@ class SearchProblem:
         self.goal = goal
         self.model = model
         self.auxheur = auxheur
+        self.agents = [[] for i in range(len(goal))]
+
+    def calcHeuristic(self, n, goal, tickets):
+        # Discovers what type of station it is
+        station = 0
+        for route in self.model[n]:
+            if route[0] > station and tickets[route[0]] > 1:
+                station = route[0]
+
+        return math.floor(distance(self.auxheur[n - 1], self.auxheur[goal - 1]) / averageCost[station])
+
+    def expandNode(self, node, agent):
+        for route in self.model[node.number]:
+
+            transp = route[0]
+            n = route[1]
+
+            #Node is parent node
+            if n == node.parent.number:
+                continue
+
+            #We dont have enough tickets to travel
+            if node.tickets[transp] < 1:
+                continue
+
+            tickets = [*(node.tickets)]
+            tickets[transp] -= 1
+
+            g = node.g + 1
+
+            h = self.calcHeuristic(n, self.goal[agent], tickets)
+
+            self.agents[agent].append(Node(n, node, g, h, tickets))
 
     def search(self, init, limitexp=2000, limitdepth=10, tickets=[math.inf, math.inf, math.inf]):
 
-        sol = []
-        openNodes = []
-        closedNodes = []
-        exp = limitexp
-        depth = limitdepth
-        g = 0
-        h = 0
-        goal = self.goal[0]
+        solution = {}
+        selection = []
         baseNode = Node(0, 0, 0, 0, [])
-        lastExpanded = 0
 
-        for n in init:
-            g = 0
-            h = 0 
-            startNode = Node(n, baseNode, 0, h, tickets) 
-            openNodes += [startNode]
+        #Initializes agents and selection list
+        for agent in range(len(init)):
+            h = self.calcHeuristic(init[agent], self.goal[agent], tickets)
+            newNode = Node(init[agent], baseNode, 0, h, tickets)
+            self.agents[agent].append(newNode)
+            selection.append(newNode)
 
-        while openNodes != []:
+        finished = [False for i in range(len(self.agents))]
 
-            #Gets node with least f
-            q = openNodes[0]
-            for x in openNodes:
-                if x.f < q.f:
-                    q = x
-            openNodes.remove(q)
-            closedNodes += [q]
+        while False in finished:
 
-            #We reached the goal
-            if q.n == goal:
+            for agent in range(len(self.agents)):
+                #Gets node with least f
+                node = self.agents[agent][0]
+                for x in self.agents[agent]:
+                    if x.f < node.f:
+                        node = x
+                self.agents[agent].remove(node)
 
-                #Trace path
-                node = q
-                while node.p.n != 0:
-                    # Find Used ticket
-                    usedTicket = 0
-                    ticketsp = node.p.tickets
-                    for i in range(3):
-                        if (ticketsp[i] > node.tickets[i]):
-                            usedTicket = i
-                            break
-                    sol += [[[i], [node.n]]]
-                    node = node.p
-                sol += [[[], [node.n]]]
-                sol.reverse()
-                ##print("foram gerados %d nos" % len(openNodes))
-                return sol
+                #We reached the goal
+                if node.number == self.goal[agent]:
+                    solution[agent] = []
 
-            exp -= 1
-            if exp < 0:
-                print("limite de expansoes atingido")
-                return []
+                    #Trace path
+                    while node.parent.number != 0:
+                        # Find Used ticket
+                        usedTicket = 0
+                        ticketsp = node.parent.tickets
+                        for i in range(3):
+                            if (ticketsp[i] > node.tickets[i]):
+                                usedTicket = i
+                                break
+                        solution[agent] += [[[i], [node.number]]]
+                        node = node.parent
+                    solution[agent] += [[[], [node.number]]]
+                    solution[agent].reverse()
+                    ##print("foram gerados %d nos" % len(openNodes))
+                    finished[agent] = True
 
-            for x in self.model[q.n]:
+                limitexp -= 1
+                if limitexp < 0:
+                    print("limite de expansoes atingido")
+                    return []
 
-                transp = x[0]                
-                n = x[1]
+                if node.g == limitdepth:
+                    print("Limte de profundidade atingido")
+                    return []
 
-                #Node is parent node
-                if n == q.p.n:
-                   continue
+                self.expandNode(node, agent)
 
-                #We dont have enough tickets to travel
-                if q.tickets[transp] < 1:
-                    continue
+        return solution
 
-                tickets = [*(q.tickets)]
-                tickets[transp] -= 1
 
-                g = q.g + 1
 
-                # Discovers what type of station it is
-                station = 0
-                for x in self.model[n]:
-                    if x[0] > station and tickets[x[0]] > 1:
-                        station = x[0]
 
-                h = math.floor(distance(self.auxheur[n - 1], self.auxheur[goal - 1]) / averageCost[station])
 
-                newNode = Node(n, q, g, h, tickets)
-                openNodes += [newNode]
 
-        return []
+
+
 
 def calcAverageCost(coords, M):
 
@@ -141,7 +155,7 @@ def calcAverageCostTransp(coords, map):
     for i in range(1, vertices):
 
         for x in map[i]:
-            
+
             transp = x[0]
             vertex = x[1]
             transpNum[transp] += 1
@@ -152,24 +166,24 @@ def calcAverageCostTransp(coords, map):
 
     return averageCost
 
-def plotpath(P,coords):   
+def plotpath(P,coords):
         img = plt.imread('maps.png')
         plt.imshow(img)
         colors = ['r.-','g+-','b^-']
         I = P[0][1]
         for agind in range(len(P[0][1])):
                 st = I[agind]-1
-                for tt in P:                        
+                for tt in P:
                         nst = tt[1][agind]-1
                         plt.plot([coords[st][0],coords[nst][0]],[coords[st][1],coords[nst][1]],colors[agind])
                         st = nst
         plt.axis('off')
         fig = plt.gcf()
         fig.set_size_inches(1.*18.5, 1.*10.5)
-        fig.savefig('test2png.png', dpi=100)   
+        fig.savefig('test2png.png', dpi=100)
         plt.show()
-        
-def validatepath(oP,oI,U,tickets=[25,25,25]): 
+
+def validatepath(oP,oI,U,tickets=[25,25,25]):
         print(oP)
         if not oP:
                 return False
@@ -183,7 +197,7 @@ def validatepath(oP,oI,U,tickets=[25,25,25]):
                 print('path does not start in the initial state')
                 return False
         del P[0]
-        
+
         for tt in P:
                 for agind,ag in enumerate(tt[1]):
                         #print(ag)
@@ -194,7 +208,7 @@ def validatepath(oP,oI,U,tickets=[25,25,25]):
                                 return False
                         else:
                                 mtickets[tt[0][agind]] -= 1
-                                
+
                                 if [tt[0][agind],ag] in U[st]:
                                         I[agind] = ag
                                         #pass
@@ -223,10 +237,10 @@ tinit = time.process_time()
 averageCost = calcAverageCostTransp(coords, M)
 print(averageCost)
 
-I = [28]
+I = [28, 13]
 
 #Taxi = linhas brancas; Autocarro = linhas azuis; Metro = linhas vermelhas
-SP = SearchProblem([85], M, coords)
+SP = SearchProblem([85, 50], M, coords)
 SOL = SP.search(I, tickets = [5, 5, 2])
 print(SOL)
 
