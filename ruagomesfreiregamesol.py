@@ -31,24 +31,23 @@ class SearchProblem:
 
         heuristics = []
 
-        for position in node.positions:
+        for agent in range(self.agents):
 
             # Discovers what type of station it is
             station = 0
-            for route in self.model[position]:
+            for route in self.model[node.positions[agent]]:
                 if route[0] > station and node.tickets[route[0]] > 0:
                     station = route[0]
 
             heurs = []
 
-            for goal in self.goal:
-                heurs += [min(distance(self.auxheur[position - 1], self.auxheur[goal - 1]) / averageCost[station], distance(self.auxheur[position - 1], self.auxheur[goal - 1]) / averageCostGlobal)]
-            heuristics += [max(heurs)]
+            dist = distance(self.auxheur[node.positions[agent] - 1], self.auxheur[self.goal[agent] - 1])
+            heuristics += [min(dist / averageCost[station], dist / averageCostGlobal)]
 
-        return sum(heuristics)/self.agents
+        return max(heuristics)
 
     def expandNode(self, node, openNodes):
-        
+
         transitions = []
 
         # Expands nodes
@@ -82,7 +81,7 @@ class SearchProblem:
                     hasTickets = False
             if not hasTickets:
                 continue
-                    
+
             # Adds positions and transports to lists
             for agent in route:
                 positions.append(agent[1])
@@ -96,7 +95,7 @@ class SearchProblem:
                 continue
             # Creates new node
             g = node.g + 1
-            
+
             newNode = Node(positions, transports, node, g, tickets)
 
             h = self.calcHeuristic(newNode)
@@ -126,7 +125,7 @@ class SearchProblem:
         openNodes.append(startNode)
 
         while openNodes != []:
-                
+
             # Gets node with least f
             node = openNodes[0]
             for x in openNodes:
@@ -144,6 +143,7 @@ class SearchProblem:
                     node = node.parent
                 solution += [[node.transports, node.positions]]
                 solution.reverse()
+                print(str(2000 - limitexp), "expansoes")
                 return solution
 
             limitexp -= 1
@@ -275,11 +275,11 @@ averageCost = averageCosts[0]
 averageCostGlobal = averageCosts[1]
 print(averageCosts)
 
-I = [28]
+I = [30, 40, 109]
 
 #Taxi = linhas brancas; Autocarro = linhas azuis; Metro = linhas vermelhas
-SP = SearchProblem([58], M, coords)
-SOL = SP.search(I, tickets = [5, 5, 2])
+SP = SearchProblem([61, 60, 71], M, coords)
+SOL = SP.search(I, tickets = [5, 20, 2])
 print(SOL)
 
 tend = time.process_time()
