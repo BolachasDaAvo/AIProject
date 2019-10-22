@@ -23,10 +23,12 @@ class SearchProblem:
 
     def __init__(self, goal, model, auxheur=[]):
         self.goal = goal
+        self.agents = len(goal)
         self.model = model
         self.auxheur = auxheur
 
     def calcHeuristic(self, node):
+
         heuristics = []
 
         for position in node.positions:
@@ -37,10 +39,13 @@ class SearchProblem:
                 if route[0] > station and node.tickets[route[0]] > 0:
                     station = route[0]
 
-            for goal in self.goal:
-                heuristics.append(math.floor(distance(self.auxheur[position - 1], self.auxheur[goal - 1]) / averageCost[station]))
+            heurs = []
 
-        return min(heuristics)
+            for goal in self.goal:
+                heurs += [min(distance(self.auxheur[position - 1], self.auxheur[goal - 1]) / averageCost[station], distance(self.auxheur[position - 1], self.auxheur[goal - 1]) / averageCostGlobal)]
+            heuristics += [max(heurs)]
+
+        return sum(heuristics)/self.agents
 
     def expandNode(self, node, openNodes):
         
@@ -48,22 +53,12 @@ class SearchProblem:
 
         # Expands nodes
         for position in node.positions:
-            # [[1,30],[0,60]]
-            transitions += self.model[position]
+            transitions += [self.model[position]]
 
-        if len(self.goal) == 1:
-            combinations = list(product(transitions))
-        else:
-            combinations = list(product(*transitions))
-        
-        
+        combinations = list(product(*transitions))
+
         # Parses list
-
-        print(combinations)
-
         for route in combinations:
-
-            print(route)
 
             hasCollision = False
             hasTickets = True
@@ -72,8 +67,8 @@ class SearchProblem:
             transports = []
 
             # Check for collisions
-            for i in range(len(route)):
-                for j in range(i + 1, len(route)):
+            for i in range(self.agents - 1):
+                for j in range(i + 1, self.agents):
                     if route[i][1] == route[j][1]:
                         hasCollision = True
             if hasCollision:
@@ -94,12 +89,11 @@ class SearchProblem:
                 transports.append(agent[0])
 
             # Checks if it's parent node
-            for i in range(len(positions)):
+            for i in range(self.agents):
                 if positions[i] == node.positions[i]:
                     didntMove = True
             if didntMove:
                 continue
-
             # Creates new node
             g = node.g + 1
             
@@ -111,15 +105,13 @@ class SearchProblem:
 
             openNodes.append(newNode)
 
-
     def isGoal(self, node):
 
-        for i in range(len(self.goal)):
+        for i in range(self.agents):
             if node.positions[i] not in self.goal:
                 return False
 
         return True
-
 
     def search(self, init, limitexp=2000, limitdepth=10, tickets=[math.inf, math.inf, math.inf]):
 
@@ -164,7 +156,6 @@ class SearchProblem:
 
             self.expandNode(node, openNodes)
 
-        print("aaaaaa")
         return []
 
 def calcAverageCost(coords, M):
@@ -207,7 +198,9 @@ def calcAverageCostTransp(coords, map):
     for i in range(3):
         averageCost[i] = transpSum[i]/transpNum[i]
 
-    return averageCost
+    averageCostGlobal = sum(transpSum) / sum(transpNum)
+
+    return [averageCost, averageCostGlobal]
 
 def plotpath(P,coords):
         img = plt.imread('maps.png')
@@ -277,19 +270,21 @@ M = AA[1]
 
 tinit = time.process_time()
 
-averageCost = calcAverageCostTransp(coords, M)
-print(averageCost)
+averageCosts = calcAverageCostTransp(coords, M)
+averageCost = averageCosts[0]
+averageCostGlobal = averageCosts[1]
+print(averageCosts)
 
-I = [20, 26]
+I = [28]
 
 #Taxi = linhas brancas; Autocarro = linhas azuis; Metro = linhas vermelhas
-SP = SearchProblem([45, 40], M, coords)
+SP = SearchProblem([58], M, coords)
 SOL = SP.search(I, tickets = [5, 5, 2])
 print(SOL)
 
 tend = time.process_time()
 
-print(tend - tinit)
+print("%.1fms"%((tend-tinit)*1000))
 '''
 if validatepath(SOL, I, M):
     print("path")
