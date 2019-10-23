@@ -29,15 +29,12 @@ def plotpath(P,coords):
         plt.show()
         
 def validatepath(oP,oI,U,tickets=[25,25,25]): 
-        print(oP)
         if not oP:
                 return False
         P = copy.deepcopy(oP)
         I = copy.copy(oI)
         mtickets = copy.copy(tickets)
 
-        print(I)
-        print(P[0][1])
         if I!=P[0][1]:
                 print('path does not start in the initial state')
                 return False
@@ -65,7 +62,6 @@ def validatepath(oP,oI,U,tickets=[25,25,25]):
                         print(tt)
                         print('there is more than one police in the same location')
                         return False
-        print(oP)
         return True
 
 tinittotal = time.process_time()
@@ -131,7 +127,7 @@ else:
         print("invalid path")
         
 print("\n(4 val) Exercise 4 - Three agents, Limits")
-print("Init [30,40,109] Goal [61,60,71]")
+print("Init [30,40,109] Goal [63,61,70]")
 SP = SearchProblem(goal = [63,61,70], model = U, auxheur=coords)
 tinit = time.process_time()
 I = [30,40,109]
@@ -146,7 +142,7 @@ else:
         print("invalid path")
 
 print("\n(4 val) Exercise 5 - Three agents, Limits, Any-Order")
-print("Init [30,40,109] Goal [61,60,71]")
+print("Init [30,40,109] Goal [63,61,70]")
 SP = SearchProblem(goal = [63,61,70], model = U, auxheur=coords)
 tinit = time.process_time()
 I = [30,40,109]
