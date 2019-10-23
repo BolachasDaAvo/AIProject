@@ -147,7 +147,7 @@ class SearchProblem:
             closedNodes.append(node)
 
             # We reached the goal
-            if self.isGoal(node):
+            if node.positions == self.goal:
                 solution = []
                 #Trace path
                 while node.positions != init:
